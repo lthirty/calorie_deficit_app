@@ -1,5 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+class _LocaleData extends InheritedWidget {
+  final AppLocalizations localizations;
+
+  const _LocaleData({
+    required this.localizations,
+    required Widget child,
+    Key? key,
+  }) : super(key: key, child: child);
+
+  @override
+  bool updateShouldNotify(_LocaleData old) => localizations != old.localizations;
+}
 
 // AdMob 测试广告单元ID
 const String _adAppId = 'ca-app-pub-3940256099942544~3347511713';
@@ -21,15 +36,45 @@ void main() async {
   runApp(const CalorieDeficitApp());
 }
 
-class CalorieDeficitApp extends StatelessWidget {
+class CalorieDeficitApp extends StatefulWidget {
   const CalorieDeficitApp({super.key});
 
   @override
+  State<CalorieDeficitApp> createState() => _CalorieDeficitAppState();
+}
+
+class _CalorieDeficitAppState extends State<CalorieDeficitApp> {
+  Locale _locale = const Locale('en');
+
+  void _changeLanguage(Locale locale) {
+    setState(() {
+      _locale = locale;
+      AppLocalizations.setCurrent(AppLocalizations(locale));
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Calorie Deficit Calculator V2.02230944',
-      theme: ThemeData(useMaterial3: true),
-      home: const InputPage(),
+    final localizations = AppLocalizations(_locale);
+    AppLocalizations.setCurrent(localizations);
+    
+    return _LocaleData(
+      localizations: localizations,
+      child: MaterialApp(
+        title: 'Calorie Deficit Calculator V2.02231046',
+        theme: ThemeData(useMaterial3: true),
+        locale: _locale,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('zh'),
+        ],
+        home: InputPage(onLanguageChanged: _changeLanguage),
+      ),
     );
   }
 }
@@ -37,7 +82,9 @@ class CalorieDeficitApp extends StatelessWidget {
 enum Gender { male, female }
 
 class InputPage extends StatefulWidget {
-  const InputPage({super.key});
+  final Function(Locale) onLanguageChanged;
+  
+  const InputPage({super.key, required this.onLanguageChanged});
 
   @override
   State<InputPage> createState() => _InputPageState();
@@ -45,6 +92,7 @@ class InputPage extends StatefulWidget {
 
 class _InputPageState extends State<InputPage> {
   Gender _gender = Gender.male;
+  Locale _currentLocale = const Locale('en');
 
   final _ageCtrl = TextEditingController(text: '30');
   final _heightCtrl = TextEditingController(text: '175'); // cm
@@ -53,13 +101,31 @@ class _InputPageState extends State<InputPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Activity factor
-  final List<_ActivityLevel> _levels = const [
-    _ActivityLevel('Sedentary (little or no exercise)', 1.2),
-    _ActivityLevel('Light (1–3 days/week)', 1.375),
-    _ActivityLevel('Moderate (3–5 days/week)', 1.55),
-    _ActivityLevel('Active (6–7 days/week)', 1.725),
-  ];
-  late _ActivityLevel _selectedLevel = _levels[0];
+  late List<_ActivityLevel> _levels;
+  late _ActivityLevel _selectedLevel;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateActivityLevels();
+  }
+
+  void _updateActivityLevels() {
+    final localizations = AppLocalizations.of(context);
+    _levels = [
+      _ActivityLevel(localizations.sedentary, 1.2),
+      _ActivityLevel(localizations.light, 1.375),
+      _ActivityLevel(localizations.moderate, 1.55),
+      _ActivityLevel(localizations.active, 1.725),
+    ];
+    _selectedLevel = _levels[0];
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateActivityLevels();
+  }
 
   @override
   void dispose() {
@@ -103,6 +169,7 @@ class _InputPageState extends State<InputPage> {
           tdee: tdee,
           suggestedCalories: suggested,
           estWeeklyLossKg: weeklyLossKg,
+          onLanguageChanged: widget.onLanguageChanged,
         ),
       ),
     );
@@ -111,9 +178,26 @@ class _InputPageState extends State<InputPage> {
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.of(context).size.width < 420 ? 16.0 : 20.0;
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calorie Deficit Calculator V2.02230944')),
+      appBar: AppBar(
+        title: Text(localizations.appTitle),
+        actions: [
+          IconButton(
+            icon: Text(_currentLocale.languageCode == 'zh' ? 'EN' : '中'),
+            onPressed: () {
+              final newLocale = _currentLocale.languageCode == 'zh' 
+                  ? const Locale('en') 
+                  : const Locale('zh');
+              setState(() {
+                _currentLocale = newLocale;
+              });
+              widget.onLanguageChanged(newLocale);
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(pad),
@@ -121,9 +205,9 @@ class _InputPageState extends State<InputPage> {
             key: _formKey,
             child: ListView(
               children: [
-                const Text(
-                  'Enter your details',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                Text(
+                  localizations.enterDetails,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 16),
 
@@ -132,12 +216,12 @@ class _InputPageState extends State<InputPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Gender', style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(localizations.gender, style: const TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       SegmentedButton<Gender>(
-                        segments: const [
-                          ButtonSegment(value: Gender.male, label: Text('Male')),
-                          ButtonSegment(value: Gender.female, label: Text('Female')),
+                        segments: [
+                          ButtonSegment(value: Gender.male, label: Text(localizations.male)),
+                          ButtonSegment(value: Gender.female, label: Text(localizations.female)),
                         ],
                         selected: {_gender},
                         onSelectionChanged: (s) => setState(() => _gender = s.first),
@@ -153,26 +237,26 @@ class _InputPageState extends State<InputPage> {
                   child: Column(
                     children: [
                       _NumberField(
-                        label: 'Age (years)',
+                        label: localizations.age,
                         controller: _ageCtrl,
-                        hint: 'e.g. 30',
+                        hint: localizations.ageHint,
                         isInt: true,
                         min: 10,
                         max: 120,
                       ),
                       const SizedBox(height: 12),
                       _NumberField(
-                        label: 'Height (cm)',
+                        label: localizations.height,
                         controller: _heightCtrl,
-                        hint: 'e.g. 175',
+                        hint: localizations.heightHint,
                         min: 100,
                         max: 230,
                       ),
                       const SizedBox(height: 12),
                       _NumberField(
-                        label: 'Weight (kg)',
+                        label: localizations.weight,
                         controller: _weightCtrl,
-                        hint: 'e.g. 75',
+                        hint: localizations.weightHint,
                         min: 30,
                         max: 300,
                       ),
@@ -187,7 +271,7 @@ class _InputPageState extends State<InputPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Activity level', style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(localizations.activityLevel, style: const TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<_ActivityLevel>(
                         value: _selectedLevel,
@@ -209,17 +293,17 @@ class _InputPageState extends State<InputPage> {
                 FilledButton.icon(
                   onPressed: _calculate,
                   icon: const Icon(Icons.calculate),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12.0),
-                    child: Text('Calculate'),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Text(localizations.calculate),
                   ),
                 ),
 
                 const SizedBox(height: 12),
 
-                const Text(
-                  'Note: Results are estimates for general fitness planning only.',
-                  style: TextStyle(fontSize: 12),
+                Text(
+                  localizations.note,
+                  style: const TextStyle(fontSize: 12),
                 ),
 
                 const SizedBox(height: 12),
@@ -235,7 +319,7 @@ class _InputPageState extends State<InputPage> {
   }
 }
 
-class ResultPage extends StatelessWidget {
+class ResultPage extends StatefulWidget {
   final Gender gender;
   final int age;
   final double heightCm;
@@ -246,6 +330,7 @@ class ResultPage extends StatelessWidget {
   final double tdee;
   final double suggestedCalories;
   final double estWeeklyLossKg;
+  final Function(Locale) onLanguageChanged;
 
   const ResultPage({
     super.key,
@@ -258,14 +343,44 @@ class ResultPage extends StatelessWidget {
     required this.tdee,
     required this.suggestedCalories,
     required this.estWeeklyLossKg,
+    required this.onLanguageChanged,
   });
 
   @override
+  State<ResultPage> createState() => _ResultPageState();
+}
+
+class _ResultPageState extends State<ResultPage> {
+  Locale _currentLocale = const Locale('en');
+
+  void _changeLanguage(Locale locale) {
+    setState(() {
+      _currentLocale = locale;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final genderText = gender == Gender.male ? 'Male' : 'Female';
+    final localizations = AppLocalizations.of(context);
+    final genderText = widget.gender == Gender.male ? localizations.male : localizations.female;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Your Results')),
+      appBar: AppBar(
+        title: Text(localizations.yourResults),
+        actions: [
+          IconButton(
+            icon: Text(_currentLocale.languageCode == 'zh' ? 'EN' : '中'),
+            onPressed: () {
+              final newLocale = _currentLocale.languageCode == 'zh' 
+                  ? const Locale('en') 
+                  : const Locale('zh');
+              _changeLanguage(newLocale);
+              // 通知父级应用语言已更改
+              widget.onLanguageChanged(newLocale);
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(18.0),
@@ -275,13 +390,13 @@ class ResultPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text(localizations.summary, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
-                    Text('Gender: $genderText'),
-                    Text('Age: $age years'),
-                    Text('Height: ${heightCm.toStringAsFixed(0)} cm'),
-                    Text('Weight: ${weightKg.toStringAsFixed(1)} kg'),
-                    Text('Activity: $activityLabel'),
+                    Text('${localizations.gender}: $genderText'),
+                    Text('${localizations.age}: ${widget.age} ${_currentLocale.languageCode == 'zh' ? '岁' : 'years'}'),
+                    Text('${localizations.height}: ${widget.heightCm.toStringAsFixed(0)} ${_currentLocale.languageCode == 'zh' ? '厘米' : 'cm'}'),
+                    Text('${localizations.weight}: ${widget.weightKg.toStringAsFixed(1)} ${_currentLocale.languageCode == 'zh' ? '公斤' : 'kg'}'),
+                    Text('${localizations.activityLevel}: ${widget.activityLabel}'),
                   ],
                 ),
               ),
@@ -292,16 +407,16 @@ class ResultPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Calories', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text(localizations.calories, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 10),
-                    _MetricRow('BMR (kcal/day)', bmr),
+                    _MetricRow(localizations.bmr, widget.bmr),
                     const SizedBox(height: 8),
-                    _MetricRow('TDEE (kcal/day)', tdee),
+                    _MetricRow(localizations.tdee, widget.tdee),
                     const Divider(height: 24),
-                    _MetricRow('Suggested intake (kcal/day)', suggestedCalories),
+                    _MetricRow(localizations.suggestedIntake, widget.suggestedCalories),
                     const SizedBox(height: 8),
                     Text(
-                      'Estimated loss: ~${estWeeklyLossKg.toStringAsFixed(2)} kg/week (approx.)',
+                      localizations.estimatedLoss(widget.estWeeklyLossKg),
                       style: const TextStyle(fontSize: 13),
                     ),
                   ],
@@ -317,9 +432,9 @@ class ResultPage extends StatelessWidget {
 
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12.0),
-                  child: Text('Back'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: Text(localizations.back),
                 ),
               ),
             ],
@@ -382,6 +497,7 @@ class _NumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return TextFormField(
       controller: controller,
       keyboardType: TextInputType.number,
@@ -392,11 +508,11 @@ class _NumberField extends StatelessWidget {
       ),
       validator: (v) {
         final s = (v ?? '').trim();
-        if (s.isEmpty) return 'Required';
+        if (s.isEmpty) return localizations.required;
         final n = double.tryParse(s);
-        if (n == null) return 'Enter a number';
-        if (n < min || n > max) return 'Range: $min ~ $max';
-        if (isInt && n % 1 != 0) return 'Must be an integer';
+        if (n == null) return localizations.enterNumber;
+        if (n < min || n > max) return localizations.range(min, max);
+        if (isInt && n % 1 != 0) return localizations.mustBeInteger;
         return null;
       },
     );
@@ -463,6 +579,7 @@ class _AdPlaceholderBannerState extends State<_AdPlaceholderBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     if (_isLoaded && _bannerAd != null) {
       return SizedBox(
         width: _bannerAd!.size.width.toDouble(),
@@ -477,7 +594,7 @@ class _AdPlaceholderBannerState extends State<_AdPlaceholderBanner> {
           border: Border.all(color: Colors.black12),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Text('Loading ad...'),
+        child: Text(localizations.loadingAd),
       );
     }
   }
@@ -559,9 +676,9 @@ class _AdPlaceholderInterstitialState extends State<_AdPlaceholderInterstitial> 
         border: Border.all(color: Colors.black12),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: const Text(
-        'Interstitial Ad will show here after calculation.',
-        style: TextStyle(fontSize: 12),
+      child: Text(
+        AppLocalizations.of(context).interstitialAd,
+        style: const TextStyle(fontSize: 12),
       ),
     );
   }
