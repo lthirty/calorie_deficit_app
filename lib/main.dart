@@ -1,6 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-void main() {
+// AdMob 测试广告单元ID
+const String _adAppId = 'ca-app-pub-3940256099942544~3347511713';
+const String _bannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
+const String _interstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化 MobileAds
+  await MobileAds.instance.initialize();
+  
+  // 配置请求配置
+  final requestConfiguration = RequestConfiguration(
+    testDeviceIds: <String>[],
+  );
+  MobileAds.instance.updateRequestConfiguration(requestConfiguration);
+  
   runApp(const CalorieDeficitApp());
 }
 
@@ -10,7 +27,7 @@ class CalorieDeficitApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Calorie Deficit Calculator V2',
+      title: 'Calorie Deficit Calculator V2.02230944',
       theme: ThemeData(useMaterial3: true),
       home: const InputPage(),
     );
@@ -96,7 +113,7 @@ class _InputPageState extends State<InputPage> {
     final pad = MediaQuery.of(context).size.width < 420 ? 16.0 : 20.0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calorie Deficit Calculator V2')),
+      appBar: AppBar(title: const Text('Calorie Deficit Calculator V2.02230944')),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(pad),
@@ -402,24 +419,140 @@ class _MetricRow extends StatelessWidget {
   }
 }
 
-class _AdPlaceholderBanner extends StatelessWidget {
+class _AdPlaceholderBanner extends StatefulWidget {
+  @override
+  State<_AdPlaceholderBanner> createState() => _AdPlaceholderBannerState();
+}
+
+class _AdPlaceholderBannerState extends State<_AdPlaceholderBanner> {
+  BannerAd? _bannerAd;
+  bool _isLoaded = false;
+
+  // 使用实际的横幅广告单元ID
+  final String _adUnitId = _bannerAdUnitId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAd();
+  }
+
+  void _loadAd() {
+    _bannerAd = BannerAd(
+      adUnitId: _adUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black12),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: const Text('Banner Ad (placeholder)'),
-    );
+    if (_isLoaded && _bannerAd != null) {
+      return SizedBox(
+        width: _bannerAd!.size.width.toDouble(),
+        height: _bannerAd!.size.height.toDouble(),
+        child: AdWidget(ad: _bannerAd!),
+      );
+    } else {
+      return Container(
+        height: 52,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.black12),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Text('Loading ad...'),
+      );
+    }
   }
 }
 
-class _AdPlaceholderInterstitial extends StatelessWidget {
+class _AdPlaceholderInterstitial extends StatefulWidget {
+  @override
+  State<_AdPlaceholderInterstitial> createState() => _AdPlaceholderInterstitialState();
+}
+
+class _AdPlaceholderInterstitialState extends State<_AdPlaceholderInterstitial> {
+  InterstitialAd? _interstitialAd;
+  bool _isAdLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInterstitialAd();
+  }
+
+  void _loadInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: _interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          setState(() {
+            _interstitialAd = ad;
+            _isAdLoaded = true;
+          });
+          
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _loadInterstitialAd(); // 加载下一个插页式广告
+            },
+            onAdFailedToShowFullScreenContent: (ad, err) {
+              ad.dispose();
+              _loadInterstitialAd(); // 加载下一个插页式广告
+            },
+          );
+        },
+        onAdFailedToLoad: (err) {
+          // 加载失败，稍后重试
+          Future.delayed(const Duration(seconds: 30), () {
+            _loadInterstitialAd();
+          });
+        },
+      ),
+    );
+  }
+
+  void _showInterstitialAd() {
+    if (_isAdLoaded && _interstitialAd != null) {
+      _interstitialAd!.show();
+      setState(() {
+        _isAdLoaded = false;
+        _interstitialAd = null;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _interstitialAd?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 在结果页面加载完成后自动显示插页式广告
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showInterstitialAd();
+    });
+    
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -427,7 +560,7 @@ class _AdPlaceholderInterstitial extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: const Text(
-        'Interstitial Ad will show here after calculation (placeholder).\nWe will integrate AdMob next.',
+        'Interstitial Ad will show here after calculation.',
         style: TextStyle(fontSize: 12),
       ),
     );

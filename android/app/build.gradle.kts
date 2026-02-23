@@ -5,6 +5,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+dependencies {
+    // Google Play Services for AdMob
+    implementation("com.google.android.gms:play-services-ads:22.6.0")
+}
+
 android {
     namespace = "com.example.calorie_deficit_app"
     compileSdk = flutter.compileSdkVersion
@@ -24,7 +29,7 @@ android {
         applicationId = "com.example.calorie_deficit_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = flutter.minSdkVersion // AdMob 要求最低 API 级别为 19
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

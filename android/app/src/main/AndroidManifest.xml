@@ -1,14 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- AdMob 需要的权限 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <application
         android:label="calorie_deficit_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
-        <!-- ✅ AdMob App ID (必须在 application 下) -->
+        <!-- ✅ AdMob 测试应用 ID (必须在 application 下) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-4052402456943696~8999600881"/>
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
 
         <activity
             android:name=".MainActivity"
