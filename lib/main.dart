@@ -20,9 +20,9 @@ class _LocaleData extends InheritedWidget {
   bool updateShouldNotify(_LocaleData old) => localizations != old.localizations;
 }
 
-// AdMob 测试广告单元ID
-const String _adAppId = 'ca-app-pub-3940256099942544~3347511713';
-const String _bannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
+// AdMob 广告单元ID
+const String _adAppId = 'ca-app-pub-4052402456943696~8999600881';
+const String _bannerAdUnitId = 'ca-app-pub-4052402456943696/5659121674';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,7 +64,7 @@ class _CalorieDeficitAppState extends State<CalorieDeficitApp> {
     return _LocaleData(
       localizations: localizations,
       child: MaterialApp(
-        title: 'Calorie Deficit Calculator V2.02231046',
+        title: 'Calorie Deficit Calculator V2.0.2',
         theme: ThemeData(useMaterial3: true),
         locale: _locale,
         localizationsDelegates: const [
