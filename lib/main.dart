@@ -1,3 +1,7 @@
+// 版本说明：
+// 2025-01-21 - CodeGeeX - 添加 flutter_localizations 支持，删除自定义的 _SimpleMaterialLocalizations 类
+// 2025-01-21 - CodeGeeX - 修复 MaterialLocalizations 相关错误
+// 2025-01-21 - CodeGeeX - 去掉插页式广告广告。
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'l10n/app_localizations.dart';
@@ -19,7 +23,6 @@ class _LocaleData extends InheritedWidget {
 // AdMob 测试广告单元ID
 const String _adAppId = 'ca-app-pub-3940256099942544~3347511713';
 const String _bannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
-const String _interstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -425,11 +428,6 @@ class _ResultPageState extends State<ResultPage> {
 
               const SizedBox(height: 12),
 
-              // Placeholder for interstitial ad trigger later
-              _AdPlaceholderInterstitial(),
-
-              const SizedBox(height: 12),
-
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Padding(
@@ -599,87 +597,13 @@ class _AdPlaceholderBannerState extends State<_AdPlaceholderBanner> {
     }
   }
 }
-
-class _AdPlaceholderInterstitial extends StatefulWidget {
-  @override
-  State<_AdPlaceholderInterstitial> createState() => _AdPlaceholderInterstitialState();
-}
-
-class _AdPlaceholderInterstitialState extends State<_AdPlaceholderInterstitial> {
-  InterstitialAd? _interstitialAd;
-  bool _isAdLoaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadInterstitialAd();
-  }
-
-  void _loadInterstitialAd() {
-    InterstitialAd.load(
-      adUnitId: _interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          setState(() {
-            _interstitialAd = ad;
-            _isAdLoaded = true;
-          });
           
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _loadInterstitialAd(); // 加载下一个插页式广告
-            },
-            onAdFailedToShowFullScreenContent: (ad, err) {
-              ad.dispose();
-              _loadInterstitialAd(); // 加载下一个插页式广告
-            },
-          );
-        },
-        onAdFailedToLoad: (err) {
-          // 加载失败，稍后重试
-          Future.delayed(const Duration(seconds: 30), () {
-            _loadInterstitialAd();
-          });
-        },
-      ),
-    );
-  }
 
-  void _showInterstitialAd() {
-    if (_isAdLoaded && _interstitialAd != null) {
-      _interstitialAd!.show();
-      setState(() {
-        _isAdLoaded = false;
-        _interstitialAd = null;
-      });
-    }
-  }
 
-  @override
-  void dispose() {
-    _interstitialAd?.dispose();
-    super.dispose();
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    // 在结果页面加载完成后自动显示插页式广告
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showInterstitialAd();
-    });
+
+
+
+
+
     
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black12),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        AppLocalizations.of(context).interstitialAd,
-        style: const TextStyle(fontSize: 12),
-      ),
-    );
-  }
-}
